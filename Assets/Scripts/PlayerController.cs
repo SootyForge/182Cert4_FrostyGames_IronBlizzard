@@ -1,11 +1,13 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Animations;
 
 /*
 [RequireComponent(typeof(CharacterController))] // Attribute ensures set component(s) are automatically added to script's target.
 */
 [RequireComponent(typeof(Rigidbody))]
+[RequireComponent(typeof(SphereCollider))]
 public class PlayerController : MonoBehaviour
 {
     #region Variables
@@ -16,20 +18,24 @@ public class PlayerController : MonoBehaviour
     public float moveSpeed = 6.0f; // Used to set player's movement speed in X and Z coordinates.
     public float jumpStrength = 8.0f; // Used to set player's jump height in Y coordinates.
 //    public float gravity = 20.0f; // Used for a constant force pushing the player down.
+    public int playerHealth = 3;
+    public GameObject iceBox;
+
 
     [Header("TECHNICAL STUFF")]
 /*
-    private Vector3 moveDirection = Vector3.zero; // moveDirection's starting input in Vector3 is neutral (0, 0, 0).
-    public CharacterController controller; // Creates a space in the script where a CharacterController component can be assigned.
+//    private Vector3 moveDirection = Vector3.zero; // moveDirection's starting input in Vector3 is neutral (0, 0, 0).
+//    public CharacterController controller; // Creates a space in the script where a CharacterController component can be assigned.
 */
-    public Rigidbody rigid;
-    public float rayDistance = 1f; // A float for the length (how far) the rayCast's line is drawn 
+    private Rigidbody rigid; // used to get player's Rigidbody component.
+    private SphereCollider iceRadius;
+    public float rayDistance = 1f; // A float for the length (how far) the rayCast's line is drawn.
     private bool isGrounded = false; // A boolean used later to make different rules for when the player is airborne/touching the ground.
     #endregion PLAYER
 
-    #region CAMERA
-
-    #endregion CAMERA
+    #region TRAP
+    public int trapDamage = 1;
+    #endregion TRAP
 
     #endregion Variables
 
@@ -51,34 +57,43 @@ public class PlayerController : MonoBehaviour
         }
         return false;
     }
-/*
-    // Use this for initialization; runs before the first/physics update on an object when the script is first active.
+
+    // Start is called just before any of the Update methods is called the first time
     private void Start()
     {
-        controller = GetComponent<CharacterController>(); // Tell's the script to retrieve the CharacterController component when the game starts.
+        rigid = GetComponent<Rigidbody>();
+        iceRadius = GetComponent<SphereCollider>();
     }
-*/
-/*
-    // Update is called once per frame; this is critical for player controls, as it ensures that no player inputs are missed or registered late.
-    void Update()
-    {
-        // The moveDirection variable was defined as a Vector3 with null values (it did nothing). Here, moveDirection fufills its destiny.
-        moveDirection = new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical")); // new X and Z values read from Inputs in Unity.
 
-        moveDirection = transform.TransformDirection(moveDirection); // Finds transform component and moves in the direction of moveDirection.
 
-        moveDirection *= moveSpeed; // Operator gets static Vector3 of moveDirection and multiplies received values of inputs by moveSpeed.
-
-        if(Input.GetButton("Jump") && IsGrounded()) // if 'jump' is pressed, AND the player is grounded.
+    /*
+        // Use this for initialization; runs before the first/physics update on an object when the script is first active.
+        private void Start()
         {
-            moveDirection.y = jumpStrength; // 'moveDirection.y' was defined above as '0'. Now it's equal to jumpStrength.
+            controller = GetComponent<CharacterController>(); // Tell's the script to retrieve the CharacterController component when the game starts.
         }
+    */
+    /*
+        // Update is called once per frame; this is critical for player controls, as it ensures that no player inputs are missed or registered late.
+        void Update()
+        {
+            // The moveDirection variable was defined as a Vector3 with null values (it did nothing). Here, moveDirection fufills its destiny.
+            moveDirection = new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical")); // new X and Z values read from Inputs in Unity.
 
-        // These two lines multiply all player's movement speeds by Time.deltaTime (if the game is paused, all forms of player movement stop).
-        moveDirection.y -= gravity * Time.deltaTime;
-        controller.Move(moveDirection * Time.deltaTime);
-    }
-*/
+            moveDirection = transform.TransformDirection(moveDirection); // Finds transform component and moves in the direction of moveDirection.
+
+            moveDirection *= moveSpeed; // Operator gets static Vector3 of moveDirection and multiplies received values of inputs by moveSpeed.
+
+            if(Input.GetButton("Jump") && IsGrounded()) // if 'jump' is pressed, AND the player is grounded.
+            {
+                moveDirection.y = jumpStrength; // 'moveDirection.y' was defined above as '0'. Now it's equal to jumpStrength.
+            }
+
+            // These two lines multiply all player's movement speeds by Time.deltaTime (if the game is paused, all forms of player movement stop).
+            moveDirection.y -= gravity * Time.deltaTime;
+            controller.Move(moveDirection * Time.deltaTime);
+        }
+    */
     void Update()
     {
         float inputH = Input.GetAxis("Horizontal") * moveSpeed;
@@ -102,4 +117,41 @@ public class PlayerController : MonoBehaviour
 
     }
 
+    // OnCollisionEnter is called when this collider/rigidbody has begun touching another rigidbody/collider
+    private void OnCollisionEnter(Collision other)
+    {
+        if (other.gameObject.tag == "Trap_Floor")
+        {
+            playerHealth -= trapDamage;
+            rigid.AddForce(Vector3.back * 20, ForceMode.Impulse);
+        }
+
+        if (other.gameObject.tag == "Trap_Wall")
+        {
+            playerHealth -= trapDamage;
+        }
+
+        if (other.gameObject.tag == "Trap_Misc")
+        {
+            playerHealth -= trapDamage;
+        }
+
+        if (playerHealth <= 0)
+        {
+            playerHealth = 0;
+        }
+        Debug.Log(playerHealth);
+    }
+
+    private void OnTriggerStay(Collider other)
+    {
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            if (other.gameObject.tag == "Trap_Floor")
+            {
+                Instantiate(iceBox, other.transform);
+                Destroy(other);
+            }
+        }
+    }
 }
